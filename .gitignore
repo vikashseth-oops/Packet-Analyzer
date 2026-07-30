@@ -1,0 +1,35 @@
+# === Compiled Executables & Binaries ===
+*.exe
+*.out
+*.app
+*.o
+*.obj
+dpi_engine
+dpi_simple
+
+# === CMake & Build Directories ===
+/.vscode/
+/build/
+/out/
+CMakeCache.txt
+CMakeFiles/
+CMakeSettings.json
+*.kdev4
+
+# === Heavy Network Traffic Files (PCAP) ===
+*.pcap
+*.pcapng
+*.cap
+
+# === Python Cache & Virtual Environments ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+
+# === Operating System Trash ===
+Thumbs.db
+.DS_Store
