@@ -20,7 +20,7 @@ namespace DPI {
 // DPI Engine - Main orchestrator
 // ============================================================================
 //
-// Architecture Overview:
+//   Architecture Overview:
 //
 //   +------------------+
 //   |   PCAP Reader    |  (Reads packets from input file)
