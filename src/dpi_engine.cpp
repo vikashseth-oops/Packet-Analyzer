@@ -276,7 +276,6 @@ PacketJob DPIEngine::createPacketJob(const PacketAnalyzer::RawPacket& raw,
         
         if (job.payload_offset < job.data.size()) {
             job.payload_length = job.data.size() - job.payload_offset;
-            job.payload_data = job.data.data() + job.payload_offset;
         }
     }
     

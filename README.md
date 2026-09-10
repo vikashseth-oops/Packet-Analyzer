@@ -1,5 +1,6 @@
 # DPI Engine - Deep Packet Inspection System
 
+> 🎓 **Preparing for an Interview?** Read the [**Interview Guide & Technical Deep Explainer**](INTERVIEW_GUIDE.md) to quickly master the 30-second elevator pitch, networking fundamentals, system architecture, C++ memory safety fixes, and model Q&A!
 
 This document explains **everything** about this project - from basic networking concepts to the complete code architecture. After reading this, you should understand exactly how packets flow through the system without needing to read the code.
 
@@ -150,27 +151,37 @@ packet_analyzer/
 ├── include/                    # Header files (declarations)
 │   ├── pcap_reader.h          # PCAP file reading
 │   ├── packet_parser.h        # Network protocol parsing
-│   ├── sni_extractor.h        # TLS/HTTP inspection
+│   ├── sni_extractor.h        # TLS/HTTP/QUIC inspection
 │   ├── types.h                # Data structures (FiveTuple, AppType, etc.)
-│   ├── rule_manager.h         # Blocking rules (multi-threaded version)
-│   ├── connection_tracker.h   # Flow tracking (multi-threaded version)
-│   ├── load_balancer.h        # LB thread (multi-threaded version)
-│   ├── fast_path.h            # FP thread (multi-threaded version)
+│   ├── rule_manager.h         # Blocking rules manager
+│   ├── connection_tracker.h   # Flow tracking
+│   ├── load_balancer.h        # LB thread pool
+│   ├── fast_path.h            # FastPath worker thread pool
 │   ├── thread_safe_queue.h    # Thread-safe queue
 │   └── dpi_engine.h           # Main orchestrator
 │
-├── src/                        # Implementation files
+├── src/                        # C++ Implementation files
 │   ├── pcap_reader.cpp        # PCAP file handling
 │   ├── packet_parser.cpp      # Protocol parsing
 │   ├── sni_extractor.cpp      # SNI/Host extraction
-│   ├── types.cpp              # Helper functions
-│   ├── main_working.cpp       # ★ SIMPLE VERSION ★
-│   ├── dpi_mt.cpp             # ★ MULTI-THREADED VERSION ★
-│   └── [other files]          # Supporting code
+│   ├── types.cpp              # Helper functions & app classification
+│   ├── main_dpi.cpp           # ★ DPI ENGINE CLI EXECUTABLE ★
+│   ├── dpi_mt.cpp             # Multi-threaded standalone CLI
+│   ├── main.cpp               # Simple standalone analyzer
+│   └── main_working.cpp       # Single-threaded reference implementation
 │
+├── web/                        # ★ WEB FRONTEND DASHBOARD & REST API ★
+│   ├── server.js              # Express.js REST API & execution engine bridge
+│   ├── package.json           # Node.js dependencies
+│   └── public/                # Web Dashboard UI Assets
+│       ├── index.html         # Responsive Single Page Application
+│       ├── css/styles.css     # Handcrafted Greenish Teal & Lime ("Tello") CSS
+│       └── js/app.js          # Dynamic UI controller & Chart.js integration
+│
+├── CMakeLists.txt             # CMake C++17 build configuration
 ├── generate_test_pcap.py      # Creates test data
 ├── test_dpi.pcap              # Sample capture with various traffic
-└── README.md                  # This file!
+└── README.md                  # Project documentation
 ```
 
 ---
@@ -866,52 +877,95 @@ Connection to YouTube:
 
 ### Prerequisites
 
-- **macOS/Linux** with C++17 compiler
-- **g++** or **clang++**
-- No external libraries needed!
+- **C++ Compiler**: GCC `g++` (MinGW-w64 on Windows, or GCC/Clang on Linux/macOS) with C++17 support
+- **CMake**: Version 3.14 or higher (Optional, but recommended)
+- **Node.js**: Version 18+ (For running the Web Dashboard)
 
-### Build Commands
+---
 
-**Simple Version:**
+### Building with CMake
+
 ```bash
-g++ -std=c++17 -O2 -I include -o dpi_simple \
-    src/main_working.cpp \
-    src/pcap_reader.cpp \
-    src/packet_parser.cpp \
-    src/sni_extractor.cpp \
-    src/types.cpp
+# Generate build configuration
+cmake -B build
+
+# Build all targets (dpi_engine, dpi_mt, packet_analyzer)
+cmake --build build
 ```
 
-**Multi-threaded Version:**
+---
+
+### Building directly with g++
+
+**Main DPI Engine (`dpi_engine.exe`):**
 ```bash
-g++ -std=c++17 -pthread -O2 -I include -o dpi_engine \
-    src/dpi_mt.cpp \
+g++ -std=c++17 -Iinclude \
+    src/main_dpi.cpp \
+    src/dpi_engine.cpp \
+    src/load_balancer.cpp \
+    src/fast_path.cpp \
+    src/connection_tracker.cpp \
+    src/rule_manager.cpp \
+    src/sni_extractor.cpp \
     src/pcap_reader.cpp \
     src/packet_parser.cpp \
-    src/sni_extractor.cpp \
-    src/types.cpp
+    src/types.cpp \
+    -o dpi_engine.exe
 ```
 
-### Running
+**Standalone Packet Analyzer (`packet_analyzer.exe`):**
+```bash
+g++ -std=c++17 -Iinclude \
+    src/main.cpp \
+    src/pcap_reader.cpp \
+    src/packet_parser.cpp \
+    src/types.cpp \
+    -o packet_analyzer.exe
+```
+
+---
+
+### Running the Web Dashboard (Recommended)
+
+1. Navigate to the `web` directory and install Node.js dependencies:
+   ```bash
+   cd web
+   npm install
+   ```
+
+2. Start the Express Web Dashboard server:
+   ```bash
+   npm start
+   ```
+
+3. Open your browser at **`http://localhost:3000`**:
+   - Experience the handcrafted **Greenish Teal & Lime ("Tello")** developer UI interface.
+   - Click **"Run Demo Capture (`test_dpi.pcap`)"** or drag-and-drop any custom `.pcap` capture file.
+   - Use one-click application toggles (YouTube, Facebook, TikTok, Instagram, Twitter, Netflix, Zoom, GitHub, etc.) to apply dynamic firewall block rules.
+   - Download the resulting filtered `.pcap` capture files directly.
+
+---
+
+### Running CLI Commands
 
 **Basic usage:**
 ```bash
 ./dpi_engine test_dpi.pcap output.pcap
 ```
 
-**With blocking:**
+**With active blocking rules:**
 ```bash
 ./dpi_engine test_dpi.pcap output.pcap \
     --block-app YouTube \
     --block-app TikTok \
     --block-ip 192.168.1.50 \
-    --block-domain facebook
+    --block-domain *.facebook.com
 ```
 
-**Configure threads (multi-threaded only):**
+**Configure Thread Pools:**
 ```bash
 ./dpi_engine input.pcap output.pcap --lbs 4 --fps 4
-# Creates 4 LB threads × 4 FP threads = 16 processing threads
+# Spawns 4 Load Balancers × 4 FastPath threads = 16 worker threads
 ```
 
 ### Creating Test Data

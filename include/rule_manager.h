@@ -125,17 +125,17 @@ public:
 
 private:
     // Thread-safe containers with read-write locks
-    mutable std::shared_mutex ip_mutex_;
+    mutable std::mutex ip_mutex_;
     std::unordered_set<uint32_t> blocked_ips_;
     
-    mutable std::shared_mutex app_mutex_;
+    mutable std::mutex app_mutex_;
     std::unordered_set<AppType> blocked_apps_;
     
-    mutable std::shared_mutex domain_mutex_;
+    mutable std::mutex domain_mutex_;
     std::unordered_set<std::string> blocked_domains_;
     std::vector<std::string> domain_patterns_;  // For wildcard matching
     
-    mutable std::shared_mutex port_mutex_;
+    mutable std::mutex port_mutex_;
     std::unordered_set<uint16_t> blocked_ports_;
     
     // Helper: Convert IP string to uint32

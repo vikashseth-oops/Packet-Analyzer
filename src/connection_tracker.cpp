@@ -170,14 +170,14 @@ GlobalConnectionTable::GlobalConnectionTable(size_t num_fps) {
 }
 
 void GlobalConnectionTable::registerTracker(int fp_id, ConnectionTracker* tracker) {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     if (fp_id < static_cast<int>(trackers_.size())) {
         trackers_[fp_id] = tracker;
     }
 }
 
 GlobalConnectionTable::GlobalStats GlobalConnectionTable::getGlobalStats() const {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     
     GlobalStats stats;
     stats.total_active_connections = 0;

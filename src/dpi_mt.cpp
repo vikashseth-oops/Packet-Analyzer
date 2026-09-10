@@ -342,7 +342,7 @@ private:
             
             // Hash to select FP
             FiveTupleHash hasher;
-            size_t fp_idx = hasher(pkt_opt->tuple) % num_fps_;
+            size_t fp_idx = (hasher(pkt_opt->tuple) >> 16) % num_fps_;
             
             fps_[fp_idx]->queue().push(std::move(*pkt_opt));
             dispatched_++;

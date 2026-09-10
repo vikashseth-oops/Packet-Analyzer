@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Packet Analyzer & DPI Engine - Traffic Inspector</title>
+  <!-- Google Fonts: Outfit, Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-wrapper">
+    
+    <!-- Top Header Bar -->
+    <header class="navbar">
+      <div class="navbar-brand">
+        <div class="logo-mark">
+          <i class="fa-solid fa-network-wired"></i>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">Packet<span class="highlight">Scope</span> DPI</span>
+          <span class="brand-subtitle">Network Flow Engine v2.0</span>
+        </div>
+      </div>
+      
+      <div class="navbar-right">
+        <div class="system-status-pill" id="status-pill">
+          <span class="status-dot"></span>
+          <span id="engine-status-text">Engine Ready</span>
+        </div>
+        <div class="time-badge" id="clock-display">00:00:00</div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="main-layout">
+
+      <!-- Action & Control Bar -->
+      <section class="panel control-panel">
+        <div class="panel-header">
+          <h2><i class="fa-solid fa-sliders-h icon-teal"></i> Capture & Analysis Control</h2>
+          <div class="tag-group">
+            <span class="pill-tag teal-tag"><i class="fa-solid fa-microchip"></i> 4 Worker Threads</span>
+            <span class="pill-tag lime-tag"><i class="fa-solid fa-shield-halved"></i> DPI Filtering Active</span>
+          </div>
+        </div>
+
+        <div class="panel-body">
+          <form id="upload-form" class="pcap-dropzone">
+            <input type="file" id="pcap-input" accept=".pcap" class="hidden-file-input">
+            <label for="pcap-input" class="dropzone-box">
+              <i class="fa-solid fa-file-import drop-icon"></i>
+              <div class="drop-info">
+                <span class="drop-title">Select or Drop a <code>.pcap</code> file</span>
+                <span class="drop-sub" id="chosen-file-name">Or run test demo capture file below</span>
+              </div>
+            </label>
+            <div class="control-actions">
+              <button type="submit" class="btn btn-teal" id="analyze-upload-btn">
+                <i class="fa-solid fa-play"></i> Analyze Upload
+              </button>
+              <button type="button" class="btn btn-lime" id="run-sample-btn">
+                <i class="fa-solid fa-bolt"></i> Run Demo Capture (`test_dpi.pcap`)
+              </button>
+              <a href="#" id="download-output-btn" class="btn btn-outline disabled" target="_blank">
+                <i class="fa-solid fa-download"></i> Export Filtered PCAP
+              </a>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Key Metrics Row -->
+      <section class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon icon-teal-bg"><i class="fa-solid fa-cubes"></i></div>
+          <div class="stat-content">
+            <span class="stat-label">Total Packets</span>
+            <span class="stat-num" id="val-total-packets">0</span>
+            <span class="stat-meta" id="val-tcp-udp">0 TCP / 0 UDP</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-lime-bg"><i class="fa-solid fa-database"></i></div>
+          <div class="stat-content">
+            <span class="stat-label">Captured Data</span>
+            <span class="stat-num" id="val-total-bytes">0 B</span>
+            <span class="stat-meta" id="val-throughput">0 KB total volume</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-teal-bg"><i class="fa-solid fa-diagram-next"></i></div>
+          <div class="stat-content">
+            <span class="stat-label">Flow Connections</span>
+            <span class="stat-num" id="val-active-flows">0</span>
+            <span class="stat-meta" id="val-classified-flows">0 classified protocols</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-rose-bg"><i class="fa-solid fa-filter-circle-xmark"></i></div>
+          <div class="stat-content">
+            <span class="stat-label">Dropped Packets</span>
+            <span class="stat-num" id="val-dropped-packets">0</span>
+            <span class="stat-meta text-rose" id="val-drop-rate">Drop Rate: 0.0%</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Analytics Charts Row -->
+      <section class="charts-row">
+        <div class="panel chart-panel">
+          <div class="panel-header">
+            <h3><i class="fa-solid fa-chart-donut icon-teal"></i> App Classification Breakdown</h3>
+            <span class="sub-text">SNI & HTTP Host Protocol Inspection</span>
+          </div>
+          <div class="chart-box">
+            <canvas id="appChart"></canvas>
+          </div>
+        </div>
+
+        <div class="panel chart-panel">
+          <div class="panel-header">
+            <h3><i class="fa-solid fa-chart-column icon-lime"></i> FastPath Worker Thread Balance</h3>
+            <span class="sub-text">Packets Dispatched (FP0 - FP3)</span>
+          </div>
+          <div class="chart-box">
+            <canvas id="threadChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Rule Configurator -->
+      <section class="panel rules-panel">
+        <div class="panel-header">
+          <h3><i class="fa-solid fa-shield-virus icon-lime"></i> DPI Filtering & Rule Configurator</h3>
+          <span class="rule-badge" id="active-rules-count">3 Rules Active</span>
+        </div>
+
+        <div class="rules-grid">
+          <!-- One-Click App Selector -->
+          <div class="rules-block">
+            <label class="block-title"><i class="fa-solid fa-toggle-on"></i> One-Click Application Filter</label>
+            <div class="apps-grid">
+              <button class="app-chip" data-app="YouTube"><i class="fa-brands fa-youtube"></i> YouTube</button>
+              <button class="app-chip" data-app="Facebook"><i class="fa-brands fa-facebook"></i> Facebook</button>
+              <button class="app-chip" data-app="TikTok"><i class="fa-brands fa-tiktok"></i> TikTok</button>
+              <button class="app-chip" data-app="Instagram"><i class="fa-brands fa-instagram"></i> Instagram</button>
+              <button class="app-chip" data-app="Twitter/X"><i class="fa-brands fa-x-twitter"></i> Twitter/X</button>
+              <button class="app-chip" data-app="Netflix"><i class="fa-solid fa-film"></i> Netflix</button>
+              <button class="app-chip" data-app="Google"><i class="fa-brands fa-google"></i> Google</button>
+              <button class="app-chip" data-app="Amazon"><i class="fa-brands fa-amazon"></i> Amazon</button>
+              <button class="app-chip" data-app="WhatsApp"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>
+              <button class="app-chip" data-app="Discord"><i class="fa-brands fa-discord"></i> Discord</button>
+              <button class="app-chip" data-app="GitHub"><i class="fa-brands fa-github"></i> GitHub</button>
+              <button class="app-chip" data-app="Zoom"><i class="fa-solid fa-video"></i> Zoom</button>
+            </div>
+          </div>
+
+          <!-- Add Custom Rule Form -->
+          <div class="rules-block">
+            <label class="block-title"><i class="fa-solid fa-plus"></i> Add Custom Blocking Rule</label>
+            <div class="form-group">
+              <select id="rule-type-select" class="custom-select">
+                <option value="ip">Source IP (192.168.1.50)</option>
+                <option value="domain">Domain Wildcard (*.tiktok.com)</option>
+                <option value="app">App Name (YouTube)</option>
+                <option value="port">Port (8080)</option>
+              </select>
+              <input type="text" id="rule-value-input" class="custom-input" placeholder="Enter IP, domain or port...">
+              <button type="button" id="add-rule-btn" class="btn btn-teal-sm"><i class="fa-solid fa-plus"></i> Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Rules Chips -->
+        <div class="active-rules-section">
+          <label class="block-title"><i class="fa-solid fa-list-check"></i> Active Firewall Rules</label>
+          <div class="chips-container" id="rule-tags-container">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Flow Table Section -->
+      <section class="panel table-panel">
+        <div class="panel-header">
+          <h3><i class="fa-solid fa-list-ol icon-teal"></i> Packet Flow Log (5-Tuple Inspector)</h3>
+          <div class="table-search">
+            <i class="fa-solid fa-search search-icon"></i>
+            <input type="text" id="flow-search-input" placeholder="Search IP, Port or Protocol...">
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Time</th>
+                <th>Source Address</th>
+                <th>Destination Address</th>
+                <th>Protocol</th>
+                <th>Payload</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="flow-table-body">
+              <tr>
+                <td colspan="7" class="empty-state">No flows captured yet. Click <strong>"Run Demo Capture"</strong> or upload a <code>.pcap</code> file.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Console Log Box -->
+      <section class="panel console-panel">
+        <div class="panel-header">
+          <h3><i class="fa-solid fa-terminal icon-lime"></i> System Output Console</h3>
+          <button id="clear-console-btn" class="btn btn-icon-sm" title="Clear Logs"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+        <div class="terminal-window" id="console-output">
+          <div class="term-line info">[System] Ready for packet inspection...</div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>PacketScope DPI Tool &copy; 2026. Handcrafted Developer Interface.</p>
+    </footer>
+
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

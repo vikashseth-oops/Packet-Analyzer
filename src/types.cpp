@@ -66,21 +66,20 @@ AppType sniToAppType(const std::string& sni) {
                    [](unsigned char c) { return std::tolower(c); });
     
     // Check for known patterns
-    // Google (including YouTube, which is owned by Google)
-    if (lower_sni.find("google") != std::string::npos ||
-        lower_sni.find("gstatic") != std::string::npos ||
-        lower_sni.find("googleapis") != std::string::npos ||
-        lower_sni.find("ggpht") != std::string::npos ||
-        lower_sni.find("gvt1") != std::string::npos) {
-        return AppType::GOOGLE;
-    }
-    
-    // YouTube
+    // YouTube (check before Google so YouTube CDN domains like ggpht are classified as YouTube)
     if (lower_sni.find("youtube") != std::string::npos ||
         lower_sni.find("ytimg") != std::string::npos ||
         lower_sni.find("youtu.be") != std::string::npos ||
-        lower_sni.find("yt3.ggpht") != std::string::npos) {
+        lower_sni.find("ggpht") != std::string::npos) {
         return AppType::YOUTUBE;
+    }
+    
+    // Google
+    if (lower_sni.find("google") != std::string::npos ||
+        lower_sni.find("gstatic") != std::string::npos ||
+        lower_sni.find("googleapis") != std::string::npos ||
+        lower_sni.find("gvt1") != std::string::npos) {
+        return AppType::GOOGLE;
     }
     
     // Facebook/Meta
